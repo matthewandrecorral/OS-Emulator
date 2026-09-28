@@ -19,7 +19,7 @@ Compiler: MinGW g++ (C++17 or later)
 Platform: Windows
 
 Build command:
-  g++ -std=c++17 -o OS-Emulator.exe main.cpp ConsoleUI.cpp CommandInterpreter.cpp Marquee.cpp
+  g++ -o OS-Emulator.exe main.cpp ConsoleUI.cpp CommandInterpreter.cpp Marquee.cpp
 
 Run:
   .\OS-Emulator.exe
@@ -34,6 +34,8 @@ Entry point: main.cpp
   ConsoleUI.h / .cpp     - Console rendering (header, marquee area, prompt, feedback)
   CommandInterpreter.h / .cpp - Command parsing and dispatch logic
   Marquee.h / .cpp       - Marquee state and bouncing animation logic
+  ConfigLoader.h         - Header-only config file parser (reads config.txt)
+  config.txt             - Configuration file for initial marquee parameters
   README.txt             - This file
 
 ----------------------------------------------

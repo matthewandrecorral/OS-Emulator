@@ -1,9 +1,5 @@
 #include "Marquee.h"
 
-// NOTE: All non-atomic fields (text, posX, posY, dirX, dirY, areaWidth, areaHeight)
-// assume single-threaded access (input → tick → redraw in one loop iteration).
-// If animation is ever moved to its own thread, these fields need synchronization.
-
 Marquee::Marquee()
     : text("Hello world in marquee!"),
       posX(0), posY(0),
@@ -16,9 +12,6 @@ Marquee::Marquee()
 
 void Marquee::setText(const std::string& newText) {
     text = newText;
-    // Intentionally reset position to top-left when text changes.
-    // This gives predictable behavior rather than continuing mid-bounce
-    // with potentially misaligned text (e.g., longer text clipping at edges).
     posX = 0;
     posY = 0;
     dirX = 1;
@@ -57,11 +50,6 @@ void Marquee::setArea(int width, int height, int startY) {
     areaWidth = width;
     areaHeight = height;
     areaStartY = startY;
-    // Clamp position to new area bounds immediately.
-    // This is what prevents drawMarqueeArea from hitting negative maxLen.
-    // Safe because setArea is currently the ONLY mutation path for areaWidth/areaHeight.
-    // If another path is added, it must also clamp — otherwise posX could exceed
-    // the new bounds between here and the next advance() tick.
     int maxX = areaWidth - static_cast<int>(text.size());
     if (maxX < 0) maxX = 0;
     if (posX > maxX) posX = maxX;
@@ -83,7 +71,6 @@ void Marquee::advance() {
     posX += dirX;
     posY += dirY;
 
-    // Bounce horizontally
     if (posX <= 0) {
         posX = 0;
         dirX = 1;
@@ -92,7 +79,6 @@ void Marquee::advance() {
         dirX = -1;
     }
 
-    // Bounce vertically
     if (posY <= 0) {
         posY = 0;
         dirY = 1;

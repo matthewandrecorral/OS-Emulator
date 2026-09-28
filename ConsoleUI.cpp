@@ -15,14 +15,12 @@ ConsoleUI::~ConsoleUI() {
 }
 
 void ConsoleUI::initialize() {
-    // Get actual console size
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     if (GetConsoleScreenBufferInfo(hConsole, &csbi)) {
         consoleWidth = csbi.srWindow.Right - csbi.srWindow.Left + 1;
         consoleHeight = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
     }
 
-    // Clear screen once at startup
     system("cls");
     hideCursor();
 }
@@ -93,24 +91,19 @@ void ConsoleUI::drawHeader() {
 void ConsoleUI::drawMarqueeArea(const Marquee& marquee) {
     int borderTopY = HEADER_HEIGHT;
     int borderBotY = HEADER_HEIGHT + SEPARATOR_LINES + MARQUEE_AREA_HEIGHT - 1;
-    int areaStartY = HEADER_HEIGHT + 1;  // row after top border
+    int areaStartY = HEADER_HEIGHT + 1;
 
-    // Draw borders
     drawHorizontalBorder(borderTopY);
     drawHorizontalBorder(borderBotY);
 
-    // Clear the inner marquee area
     clearRegion(areaStartY, borderBotY - 1);
 
-    // Draw the marquee text if running or stopped-with-text
     std::string text = marquee.getText();
     if (!text.empty()) {
         int drawY = areaStartY + marquee.getPosY();
         int drawX = marquee.getPosX();
 
-        // Clamp to area
         if (drawY >= areaStartY && drawY < borderBotY) {
-            // Truncate text if it would exceed console width
             int maxLen = consoleWidth - drawX;
             if (maxLen > 0) {
                 std::string display = text.substr(0, maxLen);
@@ -123,7 +116,6 @@ void ConsoleUI::drawMarqueeArea(const Marquee& marquee) {
         }
     }
 
-    // Show status in bottom-right of marquee area
     std::string status = marquee.isRunning() ? "[RUNNING]" : "[STOPPED]";
     status += " Speed: " + std::to_string(marquee.getSpeed()) + "ms";
     int statusX = consoleWidth - static_cast<int>(status.size()) - 1;
@@ -150,10 +142,8 @@ void ConsoleUI::drawPrompt() {
 
 void ConsoleUI::drawFeedback() {
     int startY = getFeedbackStartY();
-    // Clear feedback region
     clearRegion(startY, startY + FEEDBACK_HEIGHT - 1);
 
-    // Draw the most recent feedback lines (up to FEEDBACK_HEIGHT)
     int linesToShow = static_cast<int>(feedbackLines.size());
     if (linesToShow > FEEDBACK_HEIGHT) linesToShow = FEEDBACK_HEIGHT;
 
@@ -204,7 +194,6 @@ void ConsoleUI::setInputDirty() {
 }
 
 void ConsoleUI::addFeedback(const std::string& message) {
-    // Split multi-line messages
     std::string line;
     for (char c : message) {
         if (c == '\n') {
@@ -218,7 +207,6 @@ void ConsoleUI::addFeedback(const std::string& message) {
         feedbackLines.push_back(line);
     }
 
-    // Keep only the last 50 lines to prevent unbounded growth
     if (feedbackLines.size() > 50) {
         feedbackLines.erase(feedbackLines.begin(),
                             feedbackLines.begin() + static_cast<int>(feedbackLines.size()) - 50);
@@ -238,7 +226,7 @@ int ConsoleUI::getConsoleHeight() const {
 }
 
 int ConsoleUI::getMarqueeAreaHeight() const {
-    return MARQUEE_AREA_HEIGHT - 2;  // exclude the two border lines
+    return MARQUEE_AREA_HEIGHT - 2;
 }
 
 int ConsoleUI::getMarqueeStartY() const {
