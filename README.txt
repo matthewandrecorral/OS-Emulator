@@ -3,12 +3,11 @@
 ==============================================
 
 Group Members:
-  - [Member 1 Name]
-  - [Member 2 Name]
-  - [Member 3 Name]
-  - [Member 4 Name]
+  - Corral, Matthew 
+  - Dicreto, Eirnan
+  - Salvador, Miguel
 
-Section: [Your Section]
+Section: S03
 Version Date: September 2026
 
 ----------------------------------------------
