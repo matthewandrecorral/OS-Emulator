@@ -11,7 +11,6 @@ struct CommandEntry {
     std::string description;
 };
 
-// Result of parsing + dispatching one command
 enum class CommandResult {
     OK,
     EXIT,
@@ -19,17 +18,16 @@ enum class CommandResult {
     BAD_ARGS
 };
 
-class Marquee;  // forward declaration
+class Marquee;
 
 class CommandInterpreter {
 private:
     std::vector<CommandEntry> commandTable;
     Marquee& marquee;
-    std::string feedbackMessage;  // message to display after command execution
+    std::string feedbackMessage;
 
     void initCommandTable();
 
-    // Individual command handlers
     CommandResult cmdHelp();
     CommandResult cmdStartMarquee();
     CommandResult cmdStopMarquee();

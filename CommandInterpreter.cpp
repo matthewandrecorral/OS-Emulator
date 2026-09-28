@@ -67,7 +67,6 @@ CommandResult CommandInterpreter::cmdSetSpeed(const std::string& args) {
         return CommandResult::BAD_ARGS;
     }
 
-    // Validate that args is a valid positive integer
     for (char c : args) {
         if (!std::isdigit(static_cast<unsigned char>(c))) {
             feedbackMessage = "Error: '" + args + "' is not a valid number. Usage: set_speed <milliseconds>";
@@ -94,18 +93,17 @@ CommandResult CommandInterpreter::cmdSetSpeed(const std::string& args) {
 }
 
 CommandResult CommandInterpreter::cmdClear() {
-    feedbackMessage = "__CLEAR__";  // sentinel value handled by main loop
+    feedbackMessage = "__CLEAR__";
     return CommandResult::OK;
 }
 
 CommandResult CommandInterpreter::dispatch(const std::string& input) {
     feedbackMessage.clear();
 
-    // Trim leading/trailing whitespace
     std::string trimmed = input;
     size_t start = trimmed.find_first_not_of(" \t");
     if (start == std::string::npos) {
-        return CommandResult::OK;  // empty input, ignore
+        return CommandResult::OK;
     }
     trimmed = trimmed.substr(start);
     size_t end = trimmed.find_last_not_of(" \t");
@@ -117,7 +115,6 @@ CommandResult CommandInterpreter::dispatch(const std::string& input) {
         return CommandResult::OK;
     }
 
-    // Split into command keyword and arguments
     std::string keyword;
     std::string args;
     size_t spacePos = trimmed.find(' ');
@@ -126,7 +123,6 @@ CommandResult CommandInterpreter::dispatch(const std::string& input) {
     } else {
         keyword = trimmed.substr(0, spacePos);
         args = trimmed.substr(spacePos + 1);
-        // Trim leading spaces from args
         size_t argStart = args.find_first_not_of(" \t");
         if (argStart != std::string::npos) {
             args = args.substr(argStart);
@@ -135,12 +131,10 @@ CommandResult CommandInterpreter::dispatch(const std::string& input) {
         }
     }
 
-    // Convert keyword to lowercase for case-insensitive matching
     std::string lowerKeyword = keyword;
     std::transform(lowerKeyword.begin(), lowerKeyword.end(), lowerKeyword.begin(),
                    [](unsigned char c) { return std::tolower(c); });
 
-    // Dispatch
     if (lowerKeyword == "help")           return cmdHelp();
     if (lowerKeyword == "start_marquee")  return cmdStartMarquee();
     if (lowerKeyword == "stop_marquee")   return cmdStopMarquee();

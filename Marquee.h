@@ -13,7 +13,7 @@ private:
     int areaWidth;
     int areaHeight;
     int areaStartY;
-    std::atomic<int> speed;  // refresh interval in ms
+    std::atomic<int> speed;
     std::atomic<bool> running;
     bool needsRedraw;
 
