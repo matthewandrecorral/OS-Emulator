@@ -15,7 +15,7 @@ private:
     static const int HEADER_HEIGHT = 7;
     static const int MARQUEE_AREA_HEIGHT = 12;
     static const int SEPARATOR_LINES = 2;
-    static const int FEEDBACK_HEIGHT = 4;
+    static const int FEEDBACK_HEIGHT = 8;
 
     std::string inputBuffer;
     bool inputDirty;
