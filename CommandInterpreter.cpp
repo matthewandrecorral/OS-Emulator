@@ -1,16 +1,19 @@
 #include "CommandInterpreter.h"
 #include "Marquee.h"
+#include "Scheduler.h"
 
 #include <algorithm>
 #include <cctype>
 
-CommandInterpreter::CommandInterpreter(Marquee& marqueeRef)
-    : marquee(marqueeRef) {
+CommandInterpreter::CommandInterpreter(Marquee& marqueeRef, Scheduler& schedulerRef)
+    : marquee(marqueeRef), scheduler(schedulerRef) {
     initCommandTable();
 }
 
 void CommandInterpreter::initCommandTable() {
     commandTable = {
+        {"scheduler-test", "scheduler-test", "Start ten FCFS processes, 100 instructions each."},
+        {"screen", "screen -ls", "Show process and CPU status."},
         {"help",          "help",                      "Displays the commands and their descriptions."},
         {"start_marquee", "start_marquee",              "Starts the marquee animation."},
         {"stop_marquee",  "stop_marquee",               "Stops the marquee animation."},
@@ -117,7 +120,7 @@ CommandResult CommandInterpreter::dispatch(const std::string& input) {
 
     std::string keyword;
     std::string args;
-    size_t spacePos = trimmed.find(' ');
+    size_t spacePos = trimmed.find_first_of(" \t");
     if (spacePos == std::string::npos) {
         keyword = trimmed;
     } else {
@@ -135,6 +138,15 @@ CommandResult CommandInterpreter::dispatch(const std::string& input) {
     std::transform(lowerKeyword.begin(), lowerKeyword.end(), lowerKeyword.begin(),
                    [](unsigned char c) { return std::tolower(c); });
 
+    if (lowerKeyword == "scheduler-test" && args.empty()) {
+        try { scheduler.startBatch(); feedbackMessage="Started 10 processes on 4 FCFS cores. Use screen -ls."; }
+        catch(const std::exception& e) { feedbackMessage=std::string("Error: ")+e.what(); return CommandResult::BAD_ARGS; }
+        return CommandResult::OK;
+    }
+    if (lowerKeyword == "screen") {
+        if(args!="-ls") { feedbackMessage="Usage: screen -ls"; return CommandResult::BAD_ARGS; }
+        feedbackMessage=scheduler.report(); return CommandResult::OK;
+    }
     if (lowerKeyword == "help")           return cmdHelp();
     if (lowerKeyword == "start_marquee")  return cmdStartMarquee();
     if (lowerKeyword == "stop_marquee")   return cmdStopMarquee();

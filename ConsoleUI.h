@@ -1,58 +1,23 @@
 #pragma once
-
+#include "Console.h"
 #include <string>
 #include <vector>
-#include <windows.h>
-
 class Marquee;
-
 class ConsoleUI {
-private:
-    HANDLE hConsole;
-    int consoleWidth;
-    int consoleHeight;
-
-    static const int HEADER_HEIGHT = 7;
-    static const int MARQUEE_AREA_HEIGHT = 12;
-    static const int SEPARATOR_LINES = 2;
-    static const int FEEDBACK_HEIGHT = 8;
-
-    std::string inputBuffer;
-    bool inputDirty;
-
-    std::vector<std::string> feedbackLines;
-
-    void setCursorPosition(int x, int y);
-    void clearLine(int y);
-    void clearRegion(int startY, int endY);
-    void drawHorizontalBorder(int y);
-    void hideCursor();
-    void showCursor();
-    int getPromptY() const;
-    int getFeedbackStartY() const;
-
+ Console& console;
+ int width=80,height=24,marqueeHeight=6;
+ std::string input;
+ std::vector<std::string> feedback,previous;
 public:
-    ConsoleUI();
-    ~ConsoleUI();
-
-    void initialize();
-    void drawHeader();
-    void drawMarqueeArea(const Marquee& marquee);
-    void drawPrompt();
-    void drawFeedback();
-    void fullRedraw(const Marquee& marquee);
-
-    void appendChar(char c);
-    void removeLastChar();
-    std::string submitInput();
-    const std::string& getInputBuffer() const;
-    void setInputDirty();
-
-    void addFeedback(const std::string& message);
-    void clearFeedback();
-
-    int getConsoleWidth() const;
-    int getConsoleHeight() const;
-    int getMarqueeAreaHeight() const;
-    int getMarqueeStartY() const;
+ explicit ConsoleUI(Console& c):console(c) {}
+ bool resize();
+ void render(const Marquee& marquee);
+ void appendChar(char c) { if(input.size()<4096) input+=c; }
+ void removeLastChar() { if(!input.empty()) input.pop_back(); }
+ std::string submitInput() { auto s=input; input.clear(); return s; }
+ void addFeedback(const std::string& message);
+ void clearFeedback() { feedback.clear(); previous.clear(); console.clear(); }
+ int getConsoleWidth() const { return width; }
+ int getMarqueeAreaHeight() const { return marqueeHeight; }
+ int getMarqueeStartY() const { return 3; }
 };

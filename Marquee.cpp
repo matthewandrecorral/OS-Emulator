@@ -64,9 +64,9 @@ void Marquee::advance() {
 
     int textLen = static_cast<int>(text.size());
     int maxX = areaWidth - textLen;
-    if (maxX < 1) maxX = 1;
+    if (maxX < 0) maxX = 0;
     int maxY = areaHeight - 1;
-    if (maxY < 1) maxY = 1;
+    if (maxY < 0) maxY = 0;
 
     posX += dirX;
     posY += dirY;

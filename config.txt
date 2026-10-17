@@ -1,3 +1,0 @@
-marquee_text=Hello world in marquee!
-marquee_speed=30
-marquee_running=true

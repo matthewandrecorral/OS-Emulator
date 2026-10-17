@@ -1,234 +1,49 @@
 #include "ConsoleUI.h"
 #include "Marquee.h"
-
-#include <iostream>
-#include <string>
-
-ConsoleUI::ConsoleUI()
-    : hConsole(GetStdHandle(STD_OUTPUT_HANDLE)),
-      consoleWidth(120), consoleHeight(30),
-      inputDirty(true) {
+#include <algorithm>
+#include <sstream>
+bool ConsoleUI::resize() {
+ auto d=console.dimensions();
+ if(d.first==width && d.second==height && !previous.empty()) return false;
+ width=std::max(1,d.first); height=std::max(1,d.second);
+ marqueeHeight=std::max(1,std::min(10,height-18)); previous.clear(); console.clear(); return true;
 }
-
-ConsoleUI::~ConsoleUI() {
-    showCursor();
-}
-
-void ConsoleUI::initialize() {
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    if (GetConsoleScreenBufferInfo(hConsole, &csbi)) {
-        consoleWidth = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-        consoleHeight = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
-    }
-
-    system("cls");
-    hideCursor();
-}
-
-void ConsoleUI::setCursorPosition(int x, int y) {
-    COORD pos = { static_cast<SHORT>(x), static_cast<SHORT>(y) };
-    SetConsoleCursorPosition(hConsole, pos);
-}
-
-void ConsoleUI::clearLine(int y) {
-    DWORD written;
-    FillConsoleOutputCharacter(hConsole, ' ', consoleWidth, {0, static_cast<SHORT>(y)}, &written);
-    FillConsoleOutputAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
-                               consoleWidth, {0, static_cast<SHORT>(y)}, &written);
-}
-
-void ConsoleUI::clearRegion(int startY, int endY) {
-    for (int y = startY; y <= endY; ++y) {
-        clearLine(y);
-    }
-}
-
-void ConsoleUI::drawHorizontalBorder(int y) {
-    std::string border(consoleWidth, '*');
-    DWORD written;
-    WriteConsoleOutputCharacterA(hConsole, border.c_str(), static_cast<DWORD>(border.size()),
-                                 {0, static_cast<SHORT>(y)}, &written);
-}
-
-void ConsoleUI::hideCursor() {
-    CONSOLE_CURSOR_INFO cursorInfo;
-    GetConsoleCursorInfo(hConsole, &cursorInfo);
-    cursorInfo.bVisible = FALSE;
-    SetConsoleCursorInfo(hConsole, &cursorInfo);
-}
-
-void ConsoleUI::showCursor() {
-    CONSOLE_CURSOR_INFO cursorInfo;
-    GetConsoleCursorInfo(hConsole, &cursorInfo);
-    cursorInfo.bVisible = TRUE;
-    SetConsoleCursorInfo(hConsole, &cursorInfo);
-}
-
-int ConsoleUI::getPromptY() const {
-    return HEADER_HEIGHT + SEPARATOR_LINES + MARQUEE_AREA_HEIGHT + SEPARATOR_LINES;
-}
-
-int ConsoleUI::getFeedbackStartY() const {
-    return getPromptY() + 1;
-}
-
-void ConsoleUI::drawHeader() {
-    const char* headerArt =
-        "   ____ ____   ___  ____  _____ ______   __  "
-        "\n  / ___/ ___| / _ \\|  _ \\| ____/ ___\\ \\ / /  "
-        "\n | |   \\___ \\| | | | |_) |  _| \\___ \\\\ V /   "
-        "\n | |___ ___) | |_| |  __/| |___ ___) || |    "
-        "\n  \\____|____/ \\___/|_|   |_____|____/ |_|    ";
-
-    setCursorPosition(0, 0);
-    std::cout << headerArt;
-    setCursorPosition(0, 5);
-    std::cout << "Hello, Welcome to CSOPESY commandline!";
-    setCursorPosition(0, 6);
-    std::cout << "Type 'help' for commands, 'exit' to quit.";
-}
-
-void ConsoleUI::drawMarqueeArea(const Marquee& marquee) {
-    int borderTopY = HEADER_HEIGHT;
-    int borderBotY = HEADER_HEIGHT + SEPARATOR_LINES + MARQUEE_AREA_HEIGHT - 1;
-    int areaStartY = HEADER_HEIGHT + 1;
-
-    drawHorizontalBorder(borderTopY);
-    drawHorizontalBorder(borderBotY);
-
-    clearRegion(areaStartY, borderBotY - 1);
-
-    std::string text = marquee.getText();
-    if (!text.empty()) {
-        int drawY = areaStartY + marquee.getPosY();
-        int drawX = marquee.getPosX();
-
-        if (drawY >= areaStartY && drawY < borderBotY) {
-            int maxLen = consoleWidth - drawX;
-            if (maxLen > 0) {
-                std::string display = text.substr(0, maxLen);
-                DWORD written;
-                WriteConsoleOutputCharacterA(hConsole, display.c_str(),
-                                             static_cast<DWORD>(display.size()),
-                                             {static_cast<SHORT>(drawX), static_cast<SHORT>(drawY)},
-                                             &written);
-            }
-        }
-    }
-
-    std::string status = marquee.isRunning() ? "[RUNNING]" : "[STOPPED]";
-    status += " Speed: " + std::to_string(marquee.getSpeed()) + "ms";
-    int statusX = consoleWidth - static_cast<int>(status.size()) - 1;
-    if (statusX < 0) statusX = 0;
-    int statusY = borderBotY - 1;
-    DWORD written;
-    WriteConsoleOutputCharacterA(hConsole, status.c_str(),
-                                 static_cast<DWORD>(status.size()),
-                                 {static_cast<SHORT>(statusX), static_cast<SHORT>(statusY)},
-                                 &written);
-}
-
-void ConsoleUI::drawPrompt() {
-    int y = getPromptY();
-    clearLine(y);
-
-    std::string prompt = "Command> " + inputBuffer;
-    DWORD written;
-    WriteConsoleOutputCharacterA(hConsole, prompt.c_str(),
-                                 static_cast<DWORD>(prompt.size()),
-                                 {0, static_cast<SHORT>(y)}, &written);
-    inputDirty = false;
-}
-
-void ConsoleUI::drawFeedback() {
-    int startY = getFeedbackStartY();
-    clearRegion(startY, startY + FEEDBACK_HEIGHT - 1);
-
-    int linesToShow = static_cast<int>(feedbackLines.size());
-    if (linesToShow > FEEDBACK_HEIGHT) linesToShow = FEEDBACK_HEIGHT;
-
-    int offset = static_cast<int>(feedbackLines.size()) - linesToShow;
-    for (int i = 0; i < linesToShow; ++i) {
-        const std::string& line = feedbackLines[offset + i];
-        int y = startY + i;
-        std::string truncated = line.substr(0, consoleWidth);
-        DWORD written;
-        WriteConsoleOutputCharacterA(hConsole, truncated.c_str(),
-                                     static_cast<DWORD>(truncated.size()),
-                                     {0, static_cast<SHORT>(y)}, &written);
-    }
-}
-
-void ConsoleUI::fullRedraw(const Marquee& marquee) {
-    drawHeader();
-    drawMarqueeArea(marquee);
-    drawPrompt();
-    drawFeedback();
-}
-
-void ConsoleUI::appendChar(char c) {
-    inputBuffer += c;
-    inputDirty = true;
-}
-
-void ConsoleUI::removeLastChar() {
-    if (!inputBuffer.empty()) {
-        inputBuffer.pop_back();
-        inputDirty = true;
-    }
-}
-
-std::string ConsoleUI::submitInput() {
-    std::string result = inputBuffer;
-    inputBuffer.clear();
-    inputDirty = true;
-    return result;
-}
-
-const std::string& ConsoleUI::getInputBuffer() const {
-    return inputBuffer;
-}
-
-void ConsoleUI::setInputDirty() {
-    inputDirty = true;
-}
-
 void ConsoleUI::addFeedback(const std::string& message) {
-    std::string line;
-    for (char c : message) {
-        if (c == '\n') {
-            feedbackLines.push_back(line);
-            line.clear();
-        } else {
-            line += c;
-        }
-    }
-    if (!line.empty()) {
-        feedbackLines.push_back(line);
-    }
-
-    if (feedbackLines.size() > 50) {
-        feedbackLines.erase(feedbackLines.begin(),
-                            feedbackLines.begin() + static_cast<int>(feedbackLines.size()) - 50);
-    }
+ std::istringstream lines(message); std::string line;
+ while(std::getline(lines,line)) feedback.push_back(line);
+ if(feedback.size()>200) feedback.erase(feedback.begin(),feedback.end()-200);
 }
-
-void ConsoleUI::clearFeedback() {
-    feedbackLines.clear();
-}
-
-int ConsoleUI::getConsoleWidth() const {
-    return consoleWidth;
-}
-
-int ConsoleUI::getConsoleHeight() const {
-    return consoleHeight;
-}
-
-int ConsoleUI::getMarqueeAreaHeight() const {
-    return MARQUEE_AREA_HEIGHT - 2;
-}
-
-int ConsoleUI::getMarqueeStartY() const {
-    return HEADER_HEIGHT + 1;
+void ConsoleUI::render(const Marquee& marquee) {
+ std::vector<std::string> rows(height);
+ auto put=[&](int y,std::string s) { if(y>=0 && y<height) rows[y]=std::move(s); };
+ int usable=std::max(0,width-1); // Avoid terminal autowrap, including bottom-right cell.
+ int promptY=height-1;
+ if(height>=10) {
+  put(0,"CSOPESY OS Emulator | Type help for commands");
+  put(1,(marquee.isRunning()?"[RUNNING] ":"[STOPPED] ")+std::string("Speed: ")+std::to_string(marquee.getSpeed())+"ms");
+  put(2,std::string(usable,'*'));
+  int y=3+marquee.getPosY();
+  if(y<3+marqueeHeight) put(y,std::string(std::max(0,marquee.getPosX()),' ')+marquee.getText());
+  put(3+marqueeHeight,std::string(usable,'*'));
+  int start=4+marqueeHeight;
+  int count=std::min(static_cast<int>(feedback.size()),std::max(0,promptY-start));
+  for(int i=0;i<count;++i) put(start+i,feedback[feedback.size()-count+i]);
+ } else {
+  put(0,"Resize terminal for marquee");
+  int count=std::min(static_cast<int>(feedback.size()),std::max(0,height-2));
+  for(int i=0;i<count;++i) put(1+i,feedback[feedback.size()-count+i]);
+ }
+ std::string prompt="Command> "+input;
+ if(static_cast<int>(prompt.size())>usable) prompt=prompt.substr(prompt.size()-usable);
+ put(promptY,prompt);
+ bool changed=false;
+ for(int y=0;y<height;++y) {
+  auto& row=rows[y];
+  for(char& c:row) if(static_cast<unsigned char>(c)<32 || static_cast<unsigned char>(c)>126) c='?';
+  row.resize(std::min(row.size(),static_cast<size_t>(usable))); row.append(usable-row.size(),' ');
+  if(previous.size()!=rows.size() || row!=previous[y]) { if(!changed) console.visible(false); changed=true; console.row(y,row); }
+ }
+ previous=std::move(rows);
+ if(!changed) return;
+ console.cursor(std::min(static_cast<int>(prompt.size()),usable),promptY); console.visible(true);
 }

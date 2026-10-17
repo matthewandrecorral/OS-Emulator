@@ -19,11 +19,13 @@ enum class CommandResult {
 };
 
 class Marquee;
+class Scheduler;
 
 class CommandInterpreter {
 private:
     std::vector<CommandEntry> commandTable;
     Marquee& marquee;
+    Scheduler& scheduler;
     std::string feedbackMessage;
 
     void initCommandTable();
@@ -36,7 +38,7 @@ private:
     CommandResult cmdClear();
 
 public:
-    explicit CommandInterpreter(Marquee& marqueeRef);
+    explicit CommandInterpreter(Marquee& marqueeRef, Scheduler& schedulerRef);
 
     CommandResult dispatch(const std::string& input);
 
