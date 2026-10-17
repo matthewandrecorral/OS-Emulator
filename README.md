@@ -2,6 +2,19 @@
 
 One C++17 console application for Windows 10/11 and macOS Intel and Apple Silicon. No GUI framework, Wine or VM is required. Use an interactive terminal; redirected input/output is rejected.
 
+The emulator combines an animated marquee with a non-preemptive First-Come, First-Served (FCFS) scheduler. One dispatcher assigns ten processes to four CPU worker threads. Each process executes 100 instructions and writes its own log file while the command prompt remains available.
+
+## Get the FCFS version
+
+Clone the implementation branch:
+
+```sh
+git clone --branch FCFS-scheduler https://github.com/matthewandrecorral/OS-Emulator.git
+cd OS-Emulator
+```
+
+For an existing checkout with your work saved, use `git fetch origin` followed by `git switch FCFS-scheduler`.
+
 ## Windows
 
 Install MSYS2 from https://www.msys2.org/. In its UCRT64 terminal:
@@ -55,17 +68,48 @@ For VS Code, install C/C++ and CMake Tools extensions, and start VS Code with th
 
 ## Commands
 
-- help: command reference.
-- start_marquee / stop_marquee: animation control while typing.
-- set_text <text> / set_speed <positive milliseconds>: marquee settings.
-- scheduler-test: start ten processes with 100 instructions each.
-- screen -ls: process status snapshot, instruction counts, cores and errors. Repeat to refresh.
-- clear: clear feedback and redraw.
-- exit: cancel unfinished work, join threads and restore the terminal.
+| Command | Behavior |
+| --- | --- |
+| `help` | Show the command reference. |
+| `start_marquee` | Start or resume the animation. |
+| `stop_marquee` | Pause the animation. |
+| `set_text <text>` | Change the displayed marquee text. |
+| `set_speed <milliseconds>` | Set a positive animation interval; smaller values move faster. |
+| `scheduler-test` | Start the ten-process FCFS batch. |
+| `screen -ls` | Show process states, instruction counts, assigned cores, CPU usage and errors. |
+| `clear` | Clear feedback and redraw the screen. |
+| `exit` | Cancel unfinished work, join threads and restore the terminal. |
+
+After launching, try:
+
+```text
+set_text CSOPESY FCFS Scheduler
+set_speed 30
+scheduler-test
+screen -ls
+```
+
+Run `screen -ls` again after a few seconds. A successful batch shows ten Finished processes at 100/100, 0% CPU usage and four available cores. Core IDs are numbered 0 through 3. The report is a snapshot and does not refresh automatically.
 
 The batch starts on scheduler-test and then executes automatically. One batch is allowed per application session. Each instruction takes a simulated 10 ms by default. Logs are logs/process_1.txt through logs/process_10.txt, relative to the working directory. A new session's batch replaces these files. Finished logs have one header and 100 instruction records with UTC ISO 8601 timestamps. File creation/writing failures appear as command errors or Failed process status.
 
-The marquee starts with built-in default text and a 100 ms interval; use the commands above to change it. Input supports printable ASCII, Enter and Backspace; navigation escape sequences are ignored. Long input scrolls horizontally. Enlarge very small terminals to see the marquee and full status list.
+The marquee starts with built-in default text and a 100 ms interval; use the commands above to change it. No configuration file is required. Input supports printable ASCII, Enter and Backspace; navigation escape sequences are ignored. Long input scrolls horizontally. Enlarge very small terminals to see the marquee and full status list.
+
+## Project files
+
+| File | Purpose |
+| --- | --- |
+| `main.cpp` | Input polling, animation timing and application lifecycle. |
+| `Console.h` | Shared console interface. |
+| `ConsoleWindows.cpp` / `ConsolePosix.cpp` | Native console backends selected by CMake. |
+| `ConsoleUI.h` / `ConsoleUI.cpp` | Terminal layout, prompt, feedback and changed-row rendering. |
+| `CommandInterpreter.h` / `CommandInterpreter.cpp` | Shared command parsing and dispatch. |
+| `Marquee.h` / `Marquee.cpp` | Animation state and movement. |
+| `Scheduler.h` / `Scheduler.cpp` | Process model, FIFO dispatcher, four workers and logging. |
+| `CMakeLists.txt` | C++17 build and CTest configuration. |
+| `tests/emulator_tests.cpp` | Automated scheduler, command and rendering assertions. |
+| [SCHEDULER_TEST_CASES.md](SCHEDULER_TEST_CASES.md) | Reviewed test cases, recorded results, coverage gaps and manual checks. |
+| `.github/workflows/build.yml` | Windows and macOS build/test jobs. |
 
 ## Architecture and migration
 
@@ -78,6 +122,8 @@ Backend scoped destruction restores Windows input mode and original cursor infor
 Scheduler owns one dispatcher and four standard C++ worker threads. A mutex protects the FIFO, core assignments and process state; condition variables coordinate dispatch, completion and cancellation. Workers run each assigned process to completion without preemption. Dispatch is FIFO; simultaneous availability is resolved by core number. Instruction interleaving and completion order depend on thread timing and need not match between operating systems. Each worker exclusively owns one process log; UTC conversion is separately synchronized. Shutdown wakes delayed workers, cancels queued work and joins all threads. Process is the common platform-independent state model.
 
 ## Verification
+
+See [Scheduler test cases and review](SCHEDULER_TEST_CASES.md) for assertion-level coverage and limitations. The latest documented Windows run passed **1/1 CTest tests** in **5.07 seconds**. That one executable contains multiple assertions; it is not a count of individual scenarios.
 
 Validated locally on Windows using MSYS2 MinGW-w64 GCC 16.2: warning-enabled direct build, CMake/Ninja build and CTest. Tests cover the original commands, four active cores, FCFS dispatch 1–10, ten processes at 100/100, ten complete ordered logs, screen output, directory failures, cancellation and repeated shutdown. Rendering tests use a fake console to check prompt preservation during animation, changed-row updates and small/large resize bounds.
 
